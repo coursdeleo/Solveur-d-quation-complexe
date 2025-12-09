@@ -1,0 +1,17 @@
+export interface ComplexRoot {
+  real: number;
+  imaginary: number;
+  label: string; // e.g., "z1", "z2"
+}
+
+export interface SolutionResponse {
+  roots: ComplexRoot[];
+  latexSolution: string; // A concise summary in mathematical notation
+  explanationSteps: string[]; // Step by step textual explanation
+  equationType: string; // e.g., "Quadratic", "Polynomial", "Trigonometric"
+}
+
+export interface Example {
+  label: string;
+  equation: string;
+}

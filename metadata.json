@@ -1,0 +1,5 @@
+{
+  "name": "Solveur Complexe",
+  "description": "Une application interactive pour résoudre des équations complexes et visualiser les racines sur le plan d'Argand.",
+  "requestFramePermissions": []
+}
