@@ -14,9 +14,10 @@ import { ComplexRoot } from '../types';
 
 interface ComplexPlaneProps {
   roots: ComplexRoot[];
+  title?: string;
 }
 
-const ComplexPlane: React.FC<ComplexPlaneProps> = ({ roots }) => {
+const ComplexPlane: React.FC<ComplexPlaneProps> = ({ roots, title = "Plan Complexe (Argand)" }) => {
   
   // Determine domain to keep graph centered and readable
   const domain = useMemo(() => {
@@ -32,17 +33,24 @@ const ComplexPlane: React.FC<ComplexPlaneProps> = ({ roots }) => {
     x: root.real,
     y: root.imaginary,
     z: 1, // Size factor
-    name: root.label
+    name: root.label,
+    color: root.color || '#0ea5e9', // Default to science-500
+    source: root.sourceEquation
   }));
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const { x, y, name } = payload[0].payload;
+      const { x, y, name, source } = payload[0].payload;
       return (
-        <div className="bg-slate-800 p-3 border border-slate-700 shadow-xl rounded-lg text-sm">
+        <div className="bg-slate-800 p-3 border border-slate-700 shadow-xl rounded-lg text-sm z-50">
+          {source && (
+            <div className="mb-2 pb-2 border-b border-slate-700 font-mono text-xs text-slate-500">
+              {source}
+            </div>
+          )}
           <p className="font-bold text-slate-200">{name}</p>
-          <p className="text-slate-400">Re: {x.toFixed(3)}</p>
-          <p className="text-slate-400">Im: {y.toFixed(3)}</p>
+          <p className="text-slate-400">Re: {Number(x).toFixed(3)}</p>
+          <p className="text-slate-400">Im: {Number(y).toFixed(3)}</p>
         </div>
       );
     }
@@ -52,7 +60,7 @@ const ComplexPlane: React.FC<ComplexPlaneProps> = ({ roots }) => {
   return (
     <div className="w-full h-[400px] bg-slate-900 rounded-xl border border-slate-800 shadow-sm p-4 relative">
       <h3 className="absolute top-4 left-4 text-xs font-semibold text-slate-400 bg-slate-800/80 px-2 py-1 rounded backdrop-blur-sm z-10 border border-slate-700">
-        Plan Complexe (Argand)
+        {title}
       </h3>
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart
@@ -89,7 +97,7 @@ const ComplexPlane: React.FC<ComplexPlaneProps> = ({ roots }) => {
           
           <Scatter name="Solutions" data={data}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill="#0ea5e9" stroke="#0284c7" strokeWidth={2} />
+              <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} fillOpacity={0.6} strokeWidth={2} />
             ))}
           </Scatter>
         </ScatterChart>

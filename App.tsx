@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { solveComplexEquation } from './services/geminiService';
-import { SolutionResponse, Example } from './types';
+import { SolutionResponse, Example, HistoryItem, ComplexRoot } from './types';
 import SolutionViewer from './components/SolutionViewer';
-import { Calculator, ArrowRight, Loader2, Info, X, Activity, BookOpen, GraduationCap, Library } from 'lucide-react';
+import ComplexPlane from './components/ComplexPlane';
+import { Calculator, ArrowRight, Loader2, Info, X, Activity, BookOpen, GraduationCap, Library, History, Trash2 } from 'lucide-react';
 
 const EXAMPLES: Example[] = [
   { label: "Second degré réel", equation: "z^2 + z + 1 = 0" },
   { label: "Bicarrée", equation: "z^4 - 1 = 0" },
   { label: "Troisième degré", equation: "z^3 - 8 = 0" },
   { label: "Système simple", equation: "2z + 3i = 4 - z" },
+];
+
+const HISTORY_COLORS = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#eab308', // Yellow
+  '#22c55e', // Green
+  '#06b6d4', // Cyan
+  '#3b82f6', // Blue
+  '#8b5cf6', // Violet
+  '#d946ef', // Fuchsia
+  '#f43f5e', // Rose
 ];
 
 const Modal = ({ isOpen, onClose, title, icon: Icon, children }: any) => {
@@ -43,9 +56,57 @@ const App: React.FC = () => {
   const [solution, setSolution] = useState<SolutionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   
   // Navigation State
   const [activeModal, setActiveModal] = useState<'theory' | 'about' | 'tutorials' | null>(null);
+
+  // Load history from local storage on mount
+  useEffect(() => {
+    try {
+      const savedHistory = localStorage.getItem('complex_solver_history');
+      if (savedHistory) {
+        const parsed: HistoryItem[] = JSON.parse(savedHistory);
+        // Filter items older than 30 days
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        const validHistory = parsed.filter(item => item.timestamp > thirtyDaysAgo);
+        
+        // Update local storage if we filtered anything
+        if (validHistory.length !== parsed.length) {
+          localStorage.setItem('complex_solver_history', JSON.stringify(validHistory));
+        }
+        setHistory(validHistory);
+      }
+    } catch (e) {
+      console.error("Failed to load history", e);
+    }
+  }, []);
+
+  const addToHistory = (eq: string, sol: SolutionResponse) => {
+    // Check if duplicate (same equation recently)
+    const exists = history.find(h => h.equation === eq);
+    if (exists) return; // Optional: update timestamp instead?
+
+    const newColor = HISTORY_COLORS[history.length % HISTORY_COLORS.length];
+    const newItem: HistoryItem = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      equation: eq,
+      solution: sol,
+      color: newColor
+    };
+
+    const newHistory = [newItem, ...history];
+    setHistory(newHistory);
+    localStorage.setItem('complex_solver_history', JSON.stringify(newHistory));
+  };
+
+  const purgeHistory = () => {
+    if (window.confirm("Voulez-vous vraiment effacer tout l'historique des calculs ?")) {
+      setHistory([]);
+      localStorage.removeItem('complex_solver_history');
+    }
+  };
 
   const handleSolve = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -58,6 +119,7 @@ const App: React.FC = () => {
     try {
       const result = await solveComplexEquation(input);
       setSolution(result);
+      addToHistory(input, result);
     } catch (err: any) {
       setError(err.message || "Une erreur inconnue est survenue.");
     } finally {
@@ -75,6 +137,25 @@ const App: React.FC = () => {
     const el = document.getElementById('examples-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
+
+  const scrollToHistory = () => {
+    const el = document.getElementById('history-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Aggregate all roots from history for the global graph
+  const allHistoryRoots = useMemo(() => {
+    let allRoots: ComplexRoot[] = [];
+    history.forEach(item => {
+      const itemRoots = item.solution.roots.map(root => ({
+        ...root,
+        color: item.color,
+        sourceEquation: item.equation
+      }));
+      allRoots = [...allRoots, ...itemRoots];
+    });
+    return allRoots;
+  }, [history]);
 
   return (
     <div className="min-h-screen bg-slate-950 font-sans text-slate-100 selection:bg-science-500/30">
@@ -108,7 +189,6 @@ const App: React.FC = () => {
         icon={Library}
       >
         <div className="space-y-8 text-sm leading-relaxed">
-          
           {/* Section 1: Équations avec Conjugué */}
           <div className="space-y-3">
             <h4 className="text-lg font-bold text-science-400 flex items-center gap-2">
@@ -138,9 +218,7 @@ const App: React.FC = () => {
               </ol>
             </div>
           </div>
-
           <div className="w-full h-px bg-slate-800"></div>
-
           {/* Section 2: Second Degré */}
           <div className="space-y-3">
             <h4 className="text-lg font-bold text-science-400 flex items-center gap-2">
@@ -154,7 +232,6 @@ const App: React.FC = () => {
               <div className="text-center py-2 font-mono text-xl text-science-300 bg-slate-900 rounded border border-slate-800">
                 Δ = b² - 4ac
               </div>
-              
               <p className="font-semibold text-slate-200 mt-2">2. Selon le signe de Δ :</p>
               <ul className="space-y-2 text-slate-300">
                 <li className="flex gap-2">
@@ -178,7 +255,6 @@ const App: React.FC = () => {
               </ul>
             </div>
           </div>
-
         </div>
       </Modal>
 
@@ -195,7 +271,7 @@ const App: React.FC = () => {
           <strong>Technologie :</strong> L'application utilise l'intelligence artificielle <strong>Google Gemini</strong> pour analyser l'équation, déterminer la meilleure méthode de résolution pas à pas, et extraire les racines pour la visualisation.
         </p>
         <div className="mt-6 flex items-center justify-center">
-           <span className="text-xs text-slate-500">Version 1.0.0 • Propulsé par React & Gemini Flash</span>
+           <span className="text-xs text-slate-500">Version 1.1.0 • Propulsé par React & Gemini Flash</span>
         </div>
       </Modal>
 
@@ -227,6 +303,15 @@ const App: React.FC = () => {
             >
               Exemples
             </button>
+            {history.length > 0 && (
+              <button 
+                onClick={scrollToHistory}
+                className="px-4 py-1.5 rounded-full text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1.5"
+              >
+                <History className="w-3.5 h-3.5" />
+                Historique
+              </button>
+            )}
             <button 
               onClick={() => setActiveModal('about')}
               className="px-4 py-1.5 rounded-full text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-all"
@@ -326,6 +411,69 @@ const App: React.FC = () => {
               </div>
               <h3 className="font-semibold text-slate-200 mb-2">Visualisation Graphique</h3>
               <p className="text-sm text-slate-500 leading-relaxed">Placement automatique des racines calculées sur un plan d'Argand interactif.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Global History Section */}
+        {history.length > 0 && (
+          <div id="history-section" className="mt-24 border-t border-slate-800 pt-12 animate-in fade-in slide-in-from-bottom-8">
+            <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+              <div className="text-center md:text-left">
+                <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2 justify-center md:justify-start">
+                  <History className="w-6 h-6 text-science-500" />
+                  Historique & Vue d'Ensemble
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">
+                  Visualisation de toutes vos résolutions (30 derniers jours).
+                </p>
+              </div>
+              <button 
+                onClick={purgeHistory}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-red-400 bg-red-900/10 border border-red-900/30 rounded-lg hover:bg-red-900/20 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                Tout effacer
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* History Legend List */}
+              <div className="lg:col-span-1 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                {history.map((item) => (
+                  <div 
+                    key={item.id} 
+                    onClick={() => {
+                      loadExample(item.equation);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="p-4 bg-slate-900 rounded-xl border border-slate-800 hover:border-slate-600 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div 
+                        className="w-3 h-3 mt-1.5 rounded-full shrink-0 shadow-lg shadow-black/50" 
+                        style={{ backgroundColor: item.color }} 
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono text-sm text-slate-200 truncate group-hover:text-science-400 transition-colors">
+                          {item.equation}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                           {new Date(item.timestamp).toLocaleDateString()} • {item.solution.equationType}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Combined Graph */}
+              <div className="lg:col-span-2">
+                <ComplexPlane roots={allHistoryRoots} title="Vue Globale de l'Historique" />
+                <p className="text-center text-xs text-slate-500 mt-3">
+                  Le graphique affiche toutes les racines cumulées. Survolez un point pour voir son équation source.
+                </p>
+              </div>
             </div>
           </div>
         )}
