@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { solveComplexEquation } from './services/geminiService';
 import { SolutionResponse, Example } from './types';
 import SolutionViewer from './components/SolutionViewer';
-import { Calculator, ArrowRight, Loader2, Info, X, Activity, BookOpen, GraduationCap } from 'lucide-react';
+import { Calculator, ArrowRight, Loader2, Info, X, Activity, BookOpen, GraduationCap, Library } from 'lucide-react';
 
 const EXAMPLES: Example[] = [
   { label: "Second degré réel", equation: "z^2 + z + 1 = 0" },
@@ -45,7 +45,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Navigation State
-  const [activeModal, setActiveModal] = useState<'theory' | 'about' | null>(null);
+  const [activeModal, setActiveModal] = useState<'theory' | 'about' | 'tutorials' | null>(null);
 
   const handleSolve = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -91,17 +91,94 @@ const App: React.FC = () => {
             <strong>Nombres Complexes :</strong> Un nombre complexe est de la forme <code className="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-science-400">z = a + bi</code>, où <code className="font-mono text-slate-200">a</code> est la partie réelle et <code className="font-mono text-slate-200">b</code> la partie imaginaire.
           </p>
           <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-            <h4 className="font-semibold text-science-400 mb-2">Équation du second degré</h4>
-            <p className="mb-2">Pour <code className="font-mono text-slate-200">az² + bz + c = 0</code>, on calcule le discriminant <code className="font-mono text-slate-200">Δ = b² - 4ac</code>.</p>
-            <ul className="list-disc pl-4 space-y-1 text-slate-400">
-              <li>Si <code className="font-mono text-slate-200">Δ &gt; 0</code> : deux solutions réelles.</li>
-              <li>Si <code className="font-mono text-slate-200">Δ = 0</code> : une solution réelle double.</li>
-              <li>Si <code className="font-mono text-slate-200">Δ &lt; 0</code> : deux solutions complexes conjuguées <code className="font-mono text-slate-200">(-b ± i√|Δ|) / 2a</code>.</li>
-            </ul>
+            <h4 className="font-semibold text-science-400 mb-2">Modules et Arguments</h4>
+            <p className="mb-2">Le module <code className="font-mono text-slate-200">|z| = √(a² + b²)</code> représente la distance à l'origine.</p>
+            <p>L'argument représente l'angle avec l'axe réel.</p>
           </div>
           <p>
             <strong>Forme Exponentielle :</strong> Utile pour les racines n-ièmes. <code className="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-science-400">z = r·e^(iθ)</code>.
           </p>
+        </div>
+      </Modal>
+
+      <Modal 
+        isOpen={activeModal === 'tutorials'} 
+        onClose={() => setActiveModal(null)}
+        title="Tutoriels de Résolution"
+        icon={Library}
+      >
+        <div className="space-y-8 text-sm leading-relaxed">
+          
+          {/* Section 1: Équations avec Conjugué */}
+          <div className="space-y-3">
+            <h4 className="text-lg font-bold text-science-400 flex items-center gap-2">
+              1. Équations avec Conjugué (<span className="font-mono italic text-white">z</span> et <span className="font-mono italic text-white">z̄</span>)
+            </h4>
+            <p className="text-slate-400">
+              Ces équations contiennent à la fois <code className="text-slate-200">z</code> et son conjugué <code className="text-slate-200">z̄</code> (ex: <code className="text-xs bg-slate-800 p-1 rounded">2z + i z̄ = 5</code>). On ne peut pas isoler z directement.
+            </p>
+            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+              <p className="font-semibold text-slate-200 border-b border-slate-700 pb-2 mb-2">La Méthode Algébrique :</p>
+              <ol className="list-decimal pl-4 space-y-2 text-slate-300">
+                <li>
+                  Poser <code className="text-science-300 font-mono">z = x + iy</code> (avec x, y réels).
+                </li>
+                <li>
+                  Remplacer dans l'équation. Sachant que <code className="text-science-300 font-mono">z̄ = x - iy</code>.
+                </li>
+                <li>
+                  Développer et regrouper les parties réelles et imaginaires.
+                </li>
+                <li>
+                  Identifier : <span className="text-emerald-400">Re(gauche) = Re(droite)</span> et <span className="text-amber-400">Im(gauche) = Im(droite)</span>.
+                </li>
+                <li>
+                  Résoudre le système de 2 équations à 2 inconnues (x et y).
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="w-full h-px bg-slate-800"></div>
+
+          {/* Section 2: Second Degré */}
+          <div className="space-y-3">
+            <h4 className="text-lg font-bold text-science-400 flex items-center gap-2">
+              2. Second Degré dans ℂ
+            </h4>
+            <p className="text-slate-400">
+              Pour une équation de la forme <code className="text-slate-200 font-mono">az² + bz + c = 0</code>.
+            </p>
+            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+              <p className="font-semibold text-slate-200">1. Calculer le discriminant :</p>
+              <div className="text-center py-2 font-mono text-xl text-science-300 bg-slate-900 rounded border border-slate-800">
+                Δ = b² - 4ac
+              </div>
+              
+              <p className="font-semibold text-slate-200 mt-2">2. Selon le signe de Δ :</p>
+              <ul className="space-y-2 text-slate-300">
+                <li className="flex gap-2">
+                  <span className="font-mono text-emerald-400 whitespace-nowrap">Si Δ &gt; 0 :</span>
+                  <span>Deux solutions réelles classiques.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-mono text-emerald-400 whitespace-nowrap">Si Δ = 0 :</span>
+                  <span>Une solution unique <code className="font-mono text-slate-200">z = -b / 2a</code>.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-mono text-emerald-400 whitespace-nowrap">Si Δ &lt; 0 :</span>
+                  <span>
+                    Deux solutions complexes conjuguées. On pose <code className="font-mono">δ² = Δ</code> (avec des i). Les solutions sont :
+                    <div className="mt-2 text-center font-mono text-science-200">
+                      z₁ = (-b - i√|Δ|) / 2a <br/>
+                      z₂ = (-b + i√|Δ|) / 2a
+                    </div>
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
         </div>
       </Modal>
 
@@ -137,6 +214,12 @@ const App: React.FC = () => {
               className="px-4 py-1.5 rounded-full text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-all"
             >
               Théorie
+            </button>
+            <button 
+              onClick={() => setActiveModal('tutorials')}
+              className="px-4 py-1.5 rounded-full text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1.5"
+            >
+              Tutoriels
             </button>
             <button 
               onClick={scrollToExamples}
